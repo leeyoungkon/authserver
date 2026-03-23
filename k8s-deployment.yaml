@@ -1,0 +1,80 @@
+---
+# AuthServer ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authserver-config
+data:
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/authdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  SPRING_DATASOURCE_USERNAME: root
+  JWT_SECRET: "change-this-secret-key-to-at-least-32-bytes"
+
+---
+# AuthServer Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authserver
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: authserver
+  template:
+    metadata:
+      labels:
+        app: authserver
+    spec:
+      containers:
+        - name: authserver
+          image: yklee2002/authserver:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: authserver-config
+                  key: SPRING_DATASOURCE_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: authserver-config
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "root1234"
+            - name: JWT_SECRET
+              valueFrom:
+                configMapKeyRef:
+                  name: authserver-config
+                  key: JWT_SECRET
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            failureThreshold: 12
+            periodSeconds: 5
+         
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+# AuthServer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: authserver
+spec:
+  type: LoadBalancer
+  selector:
+    app: authserver
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
