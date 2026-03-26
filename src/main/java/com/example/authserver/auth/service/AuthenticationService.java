@@ -40,4 +40,23 @@ public class AuthenticationService {
 
         return jwtTokenProvider.generateToken(userAccount.getLoginId());
     }
+
+    public void register(LoginRequest registerRequest) {
+        if (registerRequest == null || registerRequest.id() == null || registerRequest.password() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id and password are required");
+        }
+
+        String loginId = registerRequest.id().trim();
+        if (loginId.isEmpty() || registerRequest.password().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id and password are required");
+        }
+
+        if (userAccountRepository.findByLoginId(loginId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "id already exists");
+        }
+
+        String passwordHash = passwordEncoder.encode(registerRequest.password());
+        UserAccount userAccount = new UserAccount(loginId, passwordHash);
+        userAccountRepository.save(userAccount);
+    }
 }

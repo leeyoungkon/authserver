@@ -16,7 +16,7 @@ kind: Deployment
 metadata:
   name: authserver
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: authserver
@@ -52,9 +52,11 @@ spec:
           startupProbe:
             tcpSocket:
               port: 8080
-            failureThreshold: 12
+            initialDelaySeconds: 20
             periodSeconds: 5
-         
+            timeoutSeconds: 2
+            failureThreshold: 20  
+                     
           resources:
             requests:
               memory: "256Mi"
