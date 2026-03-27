@@ -1,5 +1,7 @@
 package com.example.authserver.auth.jwt;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +20,6 @@ public class JwtTokenProvider {
     private long expirationMs;
 
     public String generateToken(String loginId) {
-        SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         Date now = new Date();
         Date expiresAt = new Date(now.getTime() + expirationMs);
 
@@ -26,7 +27,22 @@ public class JwtTokenProvider {
                 .subject(loginId)
                 .issuedAt(now)
                 .expiration(expiresAt)
-                .signWith(secretKey)
+                .signWith(getSigningKey())
                 .compact();
+    }
+
+    public String getSubject(String token) {
+        return parseToken(token).getPayload().getSubject();
+    }
+
+    private Jws<Claims> parseToken(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token);
+    }
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 }

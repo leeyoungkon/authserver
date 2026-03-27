@@ -4,6 +4,7 @@ import com.example.authserver.auth.dto.LoginRequest;
 import com.example.authserver.auth.entity.UserAccount;
 import com.example.authserver.auth.jwt.JwtTokenProvider;
 import com.example.authserver.auth.repository.UserAccountRepository;
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,16 @@ public class AuthenticationService {
         return jwtTokenProvider.generateToken(userAccount.getLoginId());
     }
 
+    public String validateAccessToken(String authorizationHeader) {
+        String token = extractBearerToken(authorizationHeader);
+
+        try {
+            return jwtTokenProvider.getSubject(token);
+        } catch (JwtException | IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
+        }
+    }
+
     public void register(LoginRequest registerRequest) {
         if (registerRequest == null || registerRequest.id() == null || registerRequest.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id and password are required");
@@ -58,5 +69,23 @@ public class AuthenticationService {
         String passwordHash = passwordEncoder.encode(registerRequest.password());
         UserAccount userAccount = new UserAccount(loginId, passwordHash);
         userAccountRepository.save(userAccount);
+    }
+
+    private String extractBearerToken(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization header is required");
+        }
+
+        String bearerPrefix = "Bearer ";
+        if (!authorizationHeader.regionMatches(true, 0, bearerPrefix, 0, bearerPrefix.length())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bearer token is required");
+        }
+
+        String token = authorizationHeader.substring(bearerPrefix.length()).trim();
+        if (token.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bearer token is required");
+        }
+
+        return token;
     }
 }

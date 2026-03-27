@@ -1,17 +1,19 @@
 package com.example.authserver.auth.controller;
 
 import com.example.authserver.auth.dto.LoginRequest;
-import com.example.authserver.auth.dto.LoginResponse;
 import com.example.authserver.auth.service.AuthenticationService;
 
 import java.util.Map;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,17 +26,22 @@ public class AuthController {
         this.authenticationService = authenticationService;
     }
 
- /*    @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest loginRequest) {
-        String token = authenticationService.authenticate(loginRequest);
-        return new LoginResponse("Bearer", token);
-    }  */
-
-     @PostMapping("/login")
+    @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
-    String token = authenticationService.authenticate(request);
-    return ResponseEntity.ok(Map.of("token", token));
-    }   
+        String token = authenticationService.authenticate(request);
+        return ResponseEntity.ok(Map.of("token", token));
+    }
+
+    @RequestMapping(value = "/validate", method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<Map<String, String>> validate(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        String loginId = authenticationService.validateAccessToken(authorizationHeader);
+
+        return ResponseEntity.ok()
+                .header("X-Authenticated-User", loginId)
+                .body(Map.of("valid", "true", "loginId", loginId));
+    }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
